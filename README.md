@@ -1,16 +1,16 @@
 # CALF: C++ Light Actor Framework
 
-CALF is cross-compatible lightweight open source implementation of the actor model for C++. By lightweight, there is not much code and, not many dependencies. In contrast to CAF: C++ Actor Framework, CALF aims to provide just the features you need with low overhead. By cross-compatible, it's been designed on linux using standard c++, compiled and tested on OSX, and should run on Windows if needed..
+CALF is cross-compatible lightweight open source implementation of the actor model for C++. Lightweight means there is not much code and, not many dependencies. In contrast to CAF: C++ Actor Framework, CALF aims to provide just the features you need with low overhead. Cross-compatible, it's been designed on linux using standard c++, compiled and tested on OSX, and should, if needed, run on Windows with some minor adjustments.
 
 ## Who is CALF for?
 
 * CALF is for you if you have a small or medium project that is suited to the actor model framework, and you don't need advanced features such as synchronous messages or distributed across computers.
-* CALF is for you is you need a simple actor model framework to facilitate passing of messages between software components (actors), either for private or commerical use.
-* CALF is for you if CAF or other actor and messaging frameworks seem like overkill. CALF needs C++11 minimum, but has no dependency on Boost. CALF uses the std c++ library (including std::thread) and has a dependecny of pugixml, itself an open-source lightweight library. 
+* CALF is for you is you need a simple actor model framework to facilitate passing of messages between software components (actors), either for private or commercial use.
+* CALF is for you if CAF or other actor and messaging frameworks seem like overkill. CALF needs C++11 minimum, but has no dependency on Boost. CALF uses the std c++ library (including std::thread) and has a dependency of pugixml, itself an open-source lightweight library. 
 
 ## What Features does CALF provide?
 
-* CALF has been designed ground-up to be threadsafe. All the usual advice applies when coding a multi-threaded program, suffice to say, the messaging platform inside CALF has been battle-tested in a multi-threaded environment.
+* CALF has been designed ground-up to be thread-safe. All the usual advice applies when coding a multi-threaded program, suffice to say, the messaging platform inside CALF has been battle-tested in a multi-threaded environment.
 * CALF has basic monitoring built-in. Total messages and current messages stats for all actors can be summoned at any time.
 * CALF has a logging system and ini handler at the user's disposal.
  
@@ -31,9 +31,9 @@ make
 ```
 
 will build a static library you can use in your project. Or, since there's not many files, you could reference the source code directly into your own build or `makefile`.
-* It doesn't make much sense to build a shared object of CALF -- because it includes main() -- so it can't be shared by multiple applications. It's a framework, not a utility library.
+* It doesn't make much sense to build a shared object of CALF — because it includes main() — so it can't be shared by multiple applications. It's a framework, not a utility library.
 * The use of std::threads will pull in a dependency on a thread implementation, typically pthreads on 'mix systems.
-* The CALF library has a dependecy on pugixml, so you would need to build that. Thankfully, pugixml is also open-source, on github, and uses CMake. So:
+* The CALF library has a dependency on pugixml, so you would need to build that. Thankfully, pugixml is also open-source, on github, and uses CMake. So:
 
 ```
 cd ..
@@ -45,9 +45,9 @@ sudo make install
 sudo ldconfig
 ```
 
-will build and install pugixml for you. Again, you could chose to include the few files in your own build or `Makefile`, but this would be the cmake approach.
+will build and install pugixml for you. Again, you could chose to include the few files in your own build or `Makefile`, but this would be the CMake approach.
 
 ## How do I use CALF?
 
-* There is a USER-GUIDE.md file in the same directory of this README.md file that outlines how to use CALF in your project. Also, you'll find a sample program in the test/ directory which is reasonably well-commented. 
+* There is a [USER-GUIDE.md](USER-GUIDE.md) file in the same directory of this `README.md` file that outlines how to use CALF in your project. Also, you'll find a sample program in the test/ directory which is reasonably well-commented. 
 
