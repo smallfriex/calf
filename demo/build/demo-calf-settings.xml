@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Settings>
+	<Logging>
+		<!-- LH_INFO=0, LH_WARN=1, LH_ERR=2 -->
+		<LOG_LEVEL>0</LOG_LEVEL>
+		<KEEP_HISTORY>false</KEEP_HISTORY>
+	</Logging>
+	<Messaging>
+		<MOVE_INTERVAL>150</MOVE_INTERVAL>
+	</Messaging>
+	<Routing>
+		<NUMBER_OF_REQUESTS_PER_MIN>10</NUMBER_OF_REQUESTS_PER_MIN>
+	</Routing>
+	<Fleet>
+		<NUMBER_OF_TRUCKS>10</NUMBER_OF_TRUCKS>
+	</Fleet>
+
+</Settings>
