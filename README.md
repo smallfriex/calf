@@ -17,7 +17,7 @@ CALF is cross-compatible lightweight open source implementation of the actor mod
 ## Who wrote CALF?
 
 * CALF was written by me, Craig Phillips. I can be contacted through my work __website__: https://www.softwareguru.ca
-* It was time for me to give something back to the open-source community. It is my hope that someone out there finds this useful, as I have found useful so much open source software for my own projects. If you do use it in a project, I'd appreciate it if you keep the directory structure intact if you distribute it.
+* It was time for me to give something back to the open-source community. It is my hope that someone out there finds this useful, as I have found useful so much open source software for my own projects. CALF is licensed under [MIT license](LICENSE.md) terms.
 * I would be delighted if people want to contribute to the project by way of bug fixes or enhancements, but please bear in mind the mantra of this project. I don't intend for this to grow into a larger messaging platform. Those exist already.
 
 ## How do I build CALF ?
