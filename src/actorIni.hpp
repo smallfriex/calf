@@ -35,13 +35,12 @@ public:
 
     // de/constructor
     actorIni(const ID& name, actorBase* parent_actor)
-    : actorBase(name,parent_actor)
-    {
+    : actorBase(name,parent_actor) {
         // create any known child actors
         
         // register our actions
-        registerAction(MESSAGE_INI_H, std::bind(&actorIni::actionReceiveIniMessage, this));
-        registerAction(NEW_MIN, std::bind(&actorIni::actionHousekeeping, this));
+        registerAction(messageIni::typeName, std::bind(&actorIni::actionReceiveIniMessage, this));
+        registerAction(eventNewMinute::typeName, std::bind(&actorIni::actionHousekeeping, this));
         
         // other initialisation
         if (iniInstance_ != 0) {

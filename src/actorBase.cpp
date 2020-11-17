@@ -148,7 +148,7 @@ void actorBase::tick()
     mseRolling_.update(); // get time now
     if (mseRolling_ > minutesSinceEpoch_) {
         minutesSinceEpoch_ = mseRolling_;
-        auto a = actions_.find(NEW_MIN);
+        auto a = actions_.find(eventNewMinute::typeName);
         if (a != actions_.end())  {
             clock_gettime(CLOCK_MONOTONIC, &frame_start);
             a->second();
@@ -159,7 +159,7 @@ void actorBase::tick()
         accumulatedMessagingDuration_ = 0;
     }
     
-    auto b = actions_.find(EA_TICK);
+    auto b = actions_.find(eventEachTick::typeName);
     if (b != actions_.end())  {
         clock_gettime(CLOCK_MONOTONIC, &frame_start);
         b->second();
@@ -184,11 +184,11 @@ void actorBase::tick()
                 //
                 // consume this message
                 //
-                auto c = actions_.find(inbuffer_.payload_->reportType());
+                auto c = actions_.find(inbuffer_.payload_->type_);
                 if (c == actions_.end()) {
                     std::stringstream ss;
                     ss << "Actor: " << getActorName() << " cannot process"
-                    << " Message: " << inbuffer_.payload_->reportType()
+                    << " Message: " << inbuffer_.payload_->type_()
                     << " From: " << inbuffer_.from_;
                     std::cerr << ss.str() << std::endl;
                 }
@@ -216,27 +216,21 @@ void actorBase::tick()
                         // first check if it's a command for the pool controller - us
                         //
                         if (inbuffer_.dest_.compare(pool.first) == 0) {                           
-                            // consume this message - NB: just handling commands for now
-                            messageCommand* cmm = GetMessagePtr<messageCommand>(inbuffer_);
-                            
-                            switch(cmm->command_) {
-                                case FLUSH_ACTOR:
-                                {
-                                    // flush has returned from POOL - free this actor for reuse   
-                                    size_t index = translateIndex(inbuffer_.from_); 
-                                    assert (index < apool.childActorsLookup_.size()); 
-                                    apool.childActorsLookup_[index] = FREE;
-                                    break;
-                                }
-                                default:
-                                {
-                                    std::cerr << actorName_ << " didn't understand " << cmm->command_ << " pool command" << std::endl;
-                                    break;
-                                }
+                            // consume this message
+                            if (inbuffer_.isType(eventFlushActor::typeName)) {
+                                
+                                // flush has returned from POOL - free this actor for reuse
+                                size_t index = translateIndex(inbuffer_.from_); 
+                                assert (index < apool.childActorsLookup_.size()); 
+                                apool.childActorsLookup_[index] = FREE;
+
+                                // we've consumed the message, so wipe
+                                WipeMessageHolder<eventFlushActor>(inbuffer_);
+
+                            } else {
+                                std::cerr << actorName_ << " didn't understand " << inbuffer_.payload_->type_() << " pool command" << std::endl;
+                                // NB: Not good, we have a potential memory leak here
                             }
-                          
-                            // we've consumed the message, so wipe
-                            WipeMessageHolder<messageCommand>(inbuffer_);
                         }
                         else {
                             //

@@ -21,6 +21,8 @@
 #include "messageLog.hpp"
 #include "messageReport.hpp"
 
+typedef messageLog::LogLevel LogLevel;
+
 void actorFleetManager::actionHousekeeping(void) {
     //
     // setup the fleet if not already constructed
@@ -46,7 +48,7 @@ void actorFleetManager::actionHousekeeping(void) {
 
 			std::stringstream ss;
 			ss << "Added truck: " << truck->getActorName() << " at location" << point;
-			SendLogEntry(LH_INFO, ss.str());
+			SendLogEntry(LogLevel::LH_INFO, ss.str());
 
 			// *we* start the thread (because it's created during runtime)
 			truck->start();
@@ -118,7 +120,7 @@ void actorFleetManager::actionReceivePointMessage(void) {
 			SetMessageHolder(outbuffer_,"REP", rmsg);
 			sendRequest(outbuffer_);
 	} else {
-			SendLogEntry(LH_ERR, "Can't find a truck");
+			SendLogEntry(LogLevel::LH_ERR, "Can't find a truck");
 			
 			// always wipe message holders when finished with data
 			WipeMessageHolder<messagePoint>(inbuffer_);

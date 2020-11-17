@@ -32,9 +32,9 @@ public:
         // create any known child threads
             
         // register our actions
-        registerAction(NEW_MIN, std::bind(&actorTruck::actionNewMinute, this));
-        registerAction(EA_TICK, std::bind(&actorTruck::actionNewTick, this));
-        registerAction(MESSAGE_POINT_H, std::bind(&actorTruck::actionReceivePointMessage, this));
+        registerAction(eventNewMinute::typeName, std::bind(&actorTruck::actionNewMinute, this));
+        registerAction(eventEachTick::typeName, std::bind(&actorTruck::actionNewTick, this));
+        registerAction(messagePoint::typeName, std::bind(&actorTruck::actionReceivePointMessage, this));
     }
 
     actorTruck(const actorTruck& other) = delete;

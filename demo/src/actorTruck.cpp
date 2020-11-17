@@ -96,8 +96,8 @@ void actorTruck::move(void) {
 			destination_ = nullptr;
 			
 			// free up the tracker we used
-			messageCommand* cmm = new messageCommand(FLUSH_ACTOR);
-            SetMessageHolder(outbuffer_,dest,cmm);
+			eventFlushActor* efa = new eventFlushActor();
+            SetMessageHolder(outbuffer_,dest,efa);
             sendRequest(outbuffer_);
 
 			// and report journey completion

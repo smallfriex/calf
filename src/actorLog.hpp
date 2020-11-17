@@ -18,6 +18,8 @@
 #include "messageLog.hpp"
 #include "actorBase.hpp"
 
+typedef messageLog::LogLevel LogLevel;
+
 class actorLog : public actorBase {
 public:
 
@@ -28,8 +30,8 @@ public:
         // create any known child actors
         
         // register our actions
-        registerAction(MESSAGE_LOG_H, std::bind(&actorLog::actionReceiveLogMessage, this));
-        registerAction(NEW_MIN, std::bind(&actorLog::actionHousekeeping, this));
+        registerAction(messageLog::typeName, std::bind(&actorLog::actionReceiveLogMessage, this));
+        registerAction(eventNewMinute::typeName, std::bind(&actorLog::actionHousekeeping, this));
                     
         // other initialisation
     }
@@ -49,7 +51,7 @@ protected:
     
 private:
     
-    int logLevel_ = LH_INFO;
+    int logLevel_ = LogLevel::LH_INFO;
 
 };
 

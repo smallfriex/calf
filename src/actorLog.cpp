@@ -38,7 +38,7 @@ void actorLog::actionReceiveLogMessage(void)
 
 void actorLog::actionHousekeeping(void) {
     // regular stuff
-    logLevel_ = getIni("Logging", "LOG_LEVEL", LH_INFO);
+    logLevel_ = getIni("Logging", "LOG_LEVEL", messageLog::LH_INFO);
     
     // flush all messages to stream - may not be necessary, as using end
     std::cerr << std::flush;

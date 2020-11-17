@@ -30,8 +30,8 @@ public:
         // create any known child threads
                  
         // register our actions
-        registerAction(MESSAGE_VECTOR_H, std::bind(&actorJourneyTracker::actionReceiveVectorMessage, this));
-        registerAction(FLUSH_ACTOR, std::bind(&actorJourneyTracker::actionFlushJourney, this)); 
+        registerAction(messageVector::typeName, std::bind(&actorJourneyTracker::actionReceiveVectorMessage, this));
+        registerAction(eventFlushActor::typeName, std::bind(&actorJourneyTracker::actionFlushJourney, this)); 
     }
 
     actorJourneyTracker(const actorJourneyTracker& other) = delete;

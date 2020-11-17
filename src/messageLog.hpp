@@ -11,20 +11,18 @@
  */
 
 #ifndef MESSAGE_LOG_H
-#define MESSAGE_LOG_H 8003
+#define MESSAGE_LOG_H
 
 #include "messageBase.hpp"
-
-enum LogLevel {LH_INFO=0, LH_WARN, LH_ERR};
 
 class messageLog : public messageBase
 {
 public:
-    
-    int reportType() {return MESSAGE_LOG_H;}
+    static Message_T typeName() {return "messageLog";}
         
-    messageLog(const int level, const std::string& message)
-    {
+    enum LogLevel {LH_INFO=0, LH_WARN, LH_ERR};
+
+    messageLog(const int level, const std::string& message) : messageBase(typeName) {
         level_ = level;
         message_.reserve(128);
         message_ = message;

@@ -29,7 +29,7 @@ public:
         // create any known child threads
                  
         // register our actions
-        registerAction(MESSAGE_REPORT_H, std::bind(&actorReport::actionReceiveReportMessage, this));   
+        registerAction(messageReport::typeName, std::bind(&actorReport::actionReceiveReportMessage, this));   
     }
 
     actorReport(const actorReport& other) = delete;

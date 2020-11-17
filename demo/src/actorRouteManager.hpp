@@ -27,7 +27,7 @@ public:
         // create any known child threads
 
         // register our actions
-        registerAction(NEW_MIN, std::bind(&actorRouteManager::actionNewMinute, this));
+        registerAction(eventNewMinute::typeName, std::bind(&actorRouteManager::actionNewMinute, this));
     }
     
      // unused default constructors

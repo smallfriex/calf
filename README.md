@@ -1,4 +1,4 @@
-# CALF: C++ Light Actor Framework
+# CALF: C++ Actor Light Framework
 
 CALF is cross-compatible lightweight open source implementation of the actor model for C++. Lightweight means there is not much code and, not many dependencies. In contrast to CAF: C++ Actor Framework, CALF aims to provide just the features you need with low overhead. Cross-compatible, it's been designed on linux using standard c++, compiled and tested on OSX, and should, if needed, run on Windows with some minor adjustments.
 
@@ -6,7 +6,7 @@ CALF is cross-compatible lightweight open source implementation of the actor mod
 
 * CALF is for you if you have a small or medium project that is suited to the actor model framework, and you don't need advanced features such as synchronous messages or distributed across computers.
 * CALF is for you is you need a simple actor model framework to facilitate passing of messages between software components (actors), either for private or commercial use.
-* CALF is for you if CAF or other actor and messaging frameworks seem like overkill. CALF needs C++11 minimum, but has no dependency on Boost. CALF uses the std c++ library (including std::thread) and has a dependency of pugixml, itself an open-source lightweight library. 
+* CALF is for you if CAF or other actor and messaging frameworks seem like overkill. CALF needs C++11 minimum, and has no dependency on Boost. CALF uses the std c++ library (including std::thread) and has a dependency of pugixml, itself an open-source lightweight library. 
 
 ## What Features does CALF provide?
 
@@ -24,18 +24,19 @@ CALF is cross-compatible lightweight open source implementation of the actor mod
 
 * By default, CALF uses CMake to build itself, so:
 
-```
+~~~bash
 cd build
 cmake -DBUILD_DEMO=ON .
 make
-```
+~~~
 
 will build a static library you can use in your project. Or, since there's not many files, you could reference the source code directly into your own build or `makefile`.
+
 * It doesn't make much sense to build a shared object of CALF — because it includes main() — so it can't be shared by multiple applications. It's a framework, not a utility library.
 * The use of std::threads will pull in a dependency on a thread implementation, typically pthreads on 'mix systems.
 * The CALF library has a dependency on pugixml, so you would need to build that. Thankfully, pugixml is also open-source, on github, and uses CMake. So:
 
-```
+~~~bash
 cd ..
 git clone https://github.com/zeux/pugixml.git
 cd pugixml
@@ -43,7 +44,7 @@ cmake -DBUILD_SHARED_LIBS=ON .
 make
 sudo make install
 sudo ldconfig
-```
+~~~
 
 will build and install pugixml for you. Again, you could chose to include the few files in your own build or `Makefile`, but this would be the CMake approach.
 

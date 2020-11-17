@@ -37,7 +37,7 @@
 
 #include "calf.hpp"
 #include "messageBase.hpp"
-#include "messageCommand.hpp"
+#include "messageEvents.hpp"
 
 typedef std::function<void(void)> ActionFunction;
 
@@ -75,8 +75,7 @@ public:
     static const int BH_LAST        = 4;
         
     // de/constructor
-    actorBase(const ID& name, actorBase* parent_actor)
-    {
+    actorBase(const ID& name, actorBase* parent_actor) {
         actorName_ = name;
         parentActor_ = parent_actor;
     }
@@ -153,14 +152,12 @@ protected:
     int requeueRequest();
     void msleep(int sleep_time = DEFAULT_SLEEP);
     
-    void registerAction(int message_type, ActionFunction member_function)
-    {
+    void registerAction(Message_T (*message_type)(void), ActionFunction member_function){
         actions_[message_type] = member_function;
     }
     
     // helpers
-    ID translateID(std::string pool_name, size_t index)
-    {
+    ID translateID(std::string pool_name, size_t index) {
         ID id = pool_name + "-ID-" + std::to_string(index);
         return id;
     }
@@ -186,7 +183,7 @@ protected:
     bool requeued_ = false;
     std::mutex messageLock_;
     
-    std::map<int, ActionFunction> actions_;
+    std::map<Message_T (*)(void), ActionFunction> actions_;
     
     messageEpoch minutesSinceEpoch_;
     messageEpoch mseRolling_;

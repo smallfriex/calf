@@ -11,27 +11,24 @@
  */
 
 #ifndef MESSAGE_POINT_H
-#define MESSAGE_POINT_H 1 
+#define MESSAGE_POINT_H
 
 #include "messageBase.hpp"
 
 class messagePoint : public messageBase
 {
 public:
-    
-    int reportType() {return MESSAGE_POINT_H;}
+    static Message_T typeName() {return "messagePoint";}
         
-    messagePoint() {
+    messagePoint() : messageBase(typeName) {
 		x_ = -1;
 		y_ = -1;
 	}
 	
-    messagePoint(const int x, const int y)
-    : x_(x), y_(y)
-    {
+    messagePoint(const int x, const int y): messageBase(typeName), x_(x), y_(y) {
     }
     
-    messagePoint(const messagePoint& p) {
+    messagePoint(const messagePoint& p) : messageBase(typeName) {
 		x_ = p.x_;
 		y_ = p.y_;
 	}

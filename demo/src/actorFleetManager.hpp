@@ -30,8 +30,8 @@ public:
         createPool<actorJourneyTracker>("JRN");
 
         // register our actions
-        registerAction(NEW_MIN, std::bind(&actorFleetManager::actionHousekeeping, this));
-        registerAction(MESSAGE_POINT_H, std::bind(&actorFleetManager::actionReceivePointMessage, this));
+        registerAction(eventNewMinute::typeName, std::bind(&actorFleetManager::actionHousekeeping, this));
+        registerAction(messagePoint::typeName, std::bind(&actorFleetManager::actionReceivePointMessage, this));
     }
     
      // unused default constructors

@@ -16,6 +16,8 @@
 
 #include "messageReport.hpp"
 
+typedef messageLog::LogLevel LogLevel;
+
 void actorJourneyTracker::actionReceiveVectorMessage(void) {
     
     // get message
@@ -48,7 +50,7 @@ void actorJourneyTracker::actionFlushJourney(void) {
 	// Send this journey to the log
 	std::stringstream ss;
 	ss << "Journey log: " << journey_;
-	SendLogEntry(LH_INFO, ss.str());
+	SendLogEntry(LogLevel::LH_INFO, ss.str());
 
 	// Clear journey ready for reuse
 	journey_.clear();

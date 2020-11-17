@@ -11,15 +11,20 @@
  */
 
 #ifndef MESSAGE_BASE_H
-#define MESSAGE_BASE_H 8000
+#define MESSAGE_BASE_H
 
 #include <cassert>
 #include <string>
 
+typedef const char* Message_T;
+
 class messageBase {
 public:
+    messageBase() = delete;
+    messageBase(Message_T (*type_of)(void)) : type_(type_of) {}
     virtual ~messageBase() = default;
-    virtual int reportType() = 0;
+    bool isType(Message_T (*test)(void)) {return (test == type_);}
+    Message_T (*type_)(void) = nullptr;
 };
 
 typedef std::string ID;
@@ -50,6 +55,8 @@ public:
     ~messageHolder() {
         // do not kill payload
     }
+
+    bool isType(Message_T (*test)(void)) {return payload_->isType(test);}
 
     ID dest_="";
     ID from_="";
@@ -82,5 +89,17 @@ payloadT* GetMessagePtr(const messageHolder& mh) {
 }
 
 #endif /* MESSAGE_BASE_H */
+
+/* Note: C++ doesn't natively support reflection, so I've used addresses of static pointers
+   to identifity message types. This is fast, adding little overhead for message construction
+   or distinguishing and you can still print a message type by dereferencing, which is useful
+   in debugging applications.
+
+   The shortfall of this approach is the switch construct can't be supported, which would
+   make the actor code that determines what to do with an incoming message a lot cleaner.
+   For this to be improved, we would have to resort to use meta-programming of some sort,
+   because even if you convert a pointer address into an integer somehow, the compiler will
+   want something constanst at compile-time in the case statements.
+*/
 
 /* end of file */

@@ -11,7 +11,7 @@
  */
 
 #ifndef MESSAGE_REPORT_H
-#define MESSAGE_REPORT_H 2 
+#define MESSAGE_REPORT_H
 
 #include "messageBase.hpp"
 
@@ -20,11 +20,9 @@
 class messageReport : public messageBase
 {
 public:
+    static Message_T typeName() {return "messageReport";}
     
-    int reportType() {return MESSAGE_REPORT_H;}
-    
-    messageReport(const std::string& message)
-    {
+    messageReport(const std::string& message) : messageBase(typeName) {
         data_.reserve(512);
         data_ = message;
     }

@@ -11,7 +11,7 @@
  */
 
 #ifndef MESSAGE_EPOCH_H
-#define MESSAGE_EPOCH_H 8001
+#define MESSAGE_EPOCH_H
 
 #include <string>
 #include <cstring>
@@ -23,27 +23,25 @@
 
 class messageEpoch : public messageBase {
 public:
-    
-    int reportType() {return MESSAGE_EPOCH_H;}
-    
-    messageEpoch() {
+    static Message_T typeName() {return "messageEpoch";}
+
+    messageEpoch() : messageBase(typeName) {
         minutesSinceEpoch_=0;
     }
     
-    messageEpoch(time_t tm) {
+    messageEpoch(time_t tm) : messageBase(typeName) {
         minutesSinceEpoch_ = floor(tm / 60);
     }
     
-    messageEpoch(const unsigned long long&  minutes)
-    {
+    messageEpoch(const unsigned long long&  minutes) : messageBase(typeName) {
         minutesSinceEpoch_ = minutes;
     }
     
-    messageEpoch(const messageEpoch& obj) {
+    messageEpoch(const messageEpoch& obj) : messageBase(typeName) {
         minutesSinceEpoch_ = obj.minutesSinceEpoch_;
     }
     
-    messageEpoch(std::string asString) {
+    messageEpoch(std::string asString) : messageBase(typeName) {
         struct tm when;
         memset(&when, 0, sizeof(struct tm));
         strptime(asString.c_str(),"%F%TR", &when);

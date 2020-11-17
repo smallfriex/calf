@@ -11,18 +11,16 @@
  */
 
 #ifndef MESSAGE_INI_H
-#define MESSAGE_INI_H 8002
+#define MESSAGE_INI_H
 
 #include "messageBase.hpp"
 
 class messageIni : public messageBase
 {
 public:
+    static Message_T typeName() {return "messageIni";}
     
-    int reportType() {return MESSAGE_INI_H;}
-    
-    messageIni(const std::string& filename)
-    {
+    messageIni(const std::string& filename) : messageBase(typeName) {
         inifile_.reserve(112);
         inifile_ = filename;
     }
