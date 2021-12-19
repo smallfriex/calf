@@ -18,7 +18,7 @@
 class messagePoint : public messageBase
 {
 public:
-    static Message_T typeName() {return "messagePoint";}
+    static Message_T typeName() {return __FILE__;}
         
     messagePoint() : messageBase(typeName) {
 		x_ = -1;

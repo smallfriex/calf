@@ -28,13 +28,13 @@ std::string messageEpoch::to_string(bool local_time) const {
     return asString;
 }
 
-long timespecDiff(struct timespec& start, struct timespec& end) {
-    long diff_secs = difftime(end.tv_sec, start.tv_sec);
-    if (diff_secs == 0) {
+unsigned long long timespecDiff(struct timespec& start, struct timespec& end) {
+    long secs = difftime(end.tv_sec, start.tv_sec);
+    if (secs == 0) {
         return end.tv_nsec - start.tv_nsec;
     }
     else {
-        return (diff_secs * 1000000000) + (end.tv_nsec - start.tv_nsec);
+        return (1000000000 * secs) + (end.tv_nsec - start.tv_nsec);
     }
 }
 

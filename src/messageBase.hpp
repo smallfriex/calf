@@ -50,6 +50,7 @@ public:
         dest_ = destination;
         from_ = from;
         payload_ = data;
+        requeued_ = 0;
     }
 
     ~messageHolder() {
@@ -58,9 +59,10 @@ public:
 
     bool isType(Message_T (*test)(void)) {return payload_->isType(test);}
 
-    ID dest_="";
-    ID from_="";
-    messageBase* payload_=0;
+    ID dest_ = "";
+    ID from_ = "";
+    messageBase* payload_ = 0;
+    unsigned int requeued_ = 0;
 };
 
 // helper to get sent from

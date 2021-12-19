@@ -25,7 +25,7 @@ class actorReport : public actorBase
 public:
     actorReport(const ID& name, actorBase* parent_actor)
         : actorBase(name,parent_actor) {
-        userStatus_=-1;    
+        userStatus_=1;    
         // create any known child threads
                  
         // register our actions
@@ -35,7 +35,7 @@ public:
     actorReport(const actorReport& other) = delete;
 
     actorReport& operator=(const actorReport& other) {
-        userStatus_=-2;
+        userStatus_=2;
         if (this == &other) return *this; // handle self assignment
         //assignment operator
         return *this;

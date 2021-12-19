@@ -21,6 +21,55 @@
 #include <unistd.h>
 #include "messageBase.hpp"
 
+template <class objectT, unsigned int sz>
+class runningAverage {
+
+public:
+    // constructors
+    runningAverage() {
+        array = new objectT[sz];
+        firstPush_ = true;
+        fill_ = 0;
+        divisor_ = 1 / sz;
+    }
+    ~runningAverage() {
+        delete [] array;
+    }
+
+   void push(const objectT& to_add) {
+        if (firstPush_) {
+            std::fill(array, array+sz, to_add);
+            firstPush_ = false;
+            fill_++;
+            return;
+        }
+        array[fill_++] = to_add;
+        if (fill_>=sz) {
+            fill_ = 0;
+        }
+    }
+
+    objectT mean() {
+        objectT total = array[0];
+        for (auto i = 1; i < sz; i++)
+            total += array[i];
+        return total * divisor_;
+    }
+
+    objectT max() {
+        objectT total = array[0];
+        for (auto i = 1; i < sz; i++)
+            total = std::max(total,array[i]);
+        return total;
+    }
+
+private:
+    bool firstPush_ = true;
+    unsigned int fill_ = 0;
+    objectT* array = NULL;
+    double divisor_ = 0;
+};
+
 class messageEpoch : public messageBase {
 public:
     static Message_T typeName() {return "messageEpoch";}
@@ -102,7 +151,7 @@ private:
     unsigned long long minutesSinceEpoch_=0; 
 };
 
-long timespecDiff(struct timespec& start, struct timespec& stop);
+unsigned long long timespecDiff(struct timespec& start, struct timespec& stop);
 
 void show_stackframe();
 

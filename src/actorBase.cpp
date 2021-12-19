@@ -34,24 +34,35 @@ int actorBase::useRequest(messageHolder& message)
     return size;
 }
 
-int actorBase::requeueRequest() {   
-    requeued_ = true;
-    sleepTime_ = DELAYED_SLEEP;
+int actorBase::requeueRequest(messageHolder& message) {   
+    requeuedCount_++;
+    message.requeued_++;
     messageLock_.lock();
-    input_.push(inbuffer_);
+    input_.push(message);
     messageLock_.unlock();
     return BH_SUCCESS;
 }
 
-int actorBase::sendRequest(messageHolder& input) {
-    messageLock_.lock();
-    input_.push(input);
-    messageLock_.unlock();
-    return BH_SUCCESS;
+int actorBase::sendRequest(messageHolder& input, bool blocking) {
+    bool lock = true;
+    if (blocking)
+        messageLock_.lock(); 
+    else
+        lock = messageLock_.try_lock();
+    if (lock) {
+        input_.push(input);
+        messageLock_.unlock();
+        return BH_SUCCESS;
+    } 
+    return BH_FAILURE;
 }
 
-int actorBase::postRequest(messageHolder& input) {
-    return sendRequest(input);
+int actorBase::postRequest(messageHolder& input, bool blocking) {
+    auto retVal = sendRequest(input, blocking);
+    if (retVal == BH_SUCCESS) {
+        messagesArrived_.notify_one(); 
+    }
+    return retVal;
 }
 
 int actorBase::start() {
@@ -69,11 +80,11 @@ int actorBase::finish() {
 // TODO: could make an xml version
 void actorBase::reportActivity(std::stringstream& output, int level) {
     for (int t=0; t<level; t++) {output << "\t";}
-    std::string messageSummary = std::to_string(input_.size()) + "/" + std::to_string(processedCount_); 
-     output << actorName_ << " | status: " << status_ << "/" << userStatus_
+    std::string messageSummary = std::to_string(input_.size()) + "/" + std::to_string(requeuedCount_) + "/" + std::to_string(processedCount_); 
+    double percentage = (0.0001f * (double) tickTimings_.mean()) / WAIT_TIME; 
+    output << actorName_ << " | status: " << status_ << " " << userStatus_
            << " | messages: " << std::setw(6) << std::setfill(' ') << messageSummary      
-           << " | time spent: " << std::setw(6) << std::setfill('0') << std::fixed << std::setprecision(2) << (latestMessagingDuration_/1000.0)
-           << "/" << std::setw(6) << std::setfill('0') << std::fixed << std::setprecision(2) << (latestHousekeepingDuration_/1000.0) << "\n";
+           << " | load: "     << std::setw(7) << std::setfill('0') << std::fixed << std::setprecision(3) << percentage << "%\n";
     for (auto& pool : childPools_) {
         for (int t=0; t<level; t++) {output << "\t";}
         output << "- POOL: " << pool.first << "\n";
@@ -90,10 +101,6 @@ void actorBase::reportActivity(std::stringstream& output, int level) {
     }
 }
 
-void actorBase::msleep(int sleep_time) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-}
-
 void actorBase::execute()
 {
     status_ = STARTED;
@@ -104,14 +111,15 @@ void actorBase::execute()
     // main body
     try {
         while (running_) {
+            std::unique_lock<std::mutex> ulock(workLock_);
+            messagesArrived_.wait_for(ulock, std::chrono::milliseconds(WAIT_TIME));
             tick();
-            msleep(sleepTime_);
         }
         status_ = STOPPING;
         // consume remaining messages - not sure if this is necessary
         while (!input_.empty()) {
             tick();
-            msleep();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
     catch (std::exception& e)
@@ -138,43 +146,32 @@ void actorBase::execute()
     }
 }
 
-void actorBase::tick()
-{
-    // reset next time delay
-    sleepTime_ = DEFAULT_SLEEP;
-    
+void actorBase::tick() 
+{   
     struct timespec frame_start, frame_end;
+    clock_gettime(CLOCK_MONOTONIC, &frame_start);
+
     // check for time-based events first
     mseRolling_.update(); // get time now
     if (mseRolling_ > minutesSinceEpoch_) {
         minutesSinceEpoch_ = mseRolling_;
         auto a = actions_.find(eventNewMinute::typeName);
         if (a != actions_.end())  {
-            clock_gettime(CLOCK_MONOTONIC, &frame_start);
             a->second();
-            clock_gettime(CLOCK_MONOTONIC, &frame_end);
-            latestHousekeepingDuration_ = timespecDiff(frame_start, frame_end);
         }
-        latestMessagingDuration_ = accumulatedMessagingDuration_;
-        accumulatedMessagingDuration_ = 0;
     }
     
     auto b = actions_.find(eventEachTick::typeName);
     if (b != actions_.end())  {
-        clock_gettime(CLOCK_MONOTONIC, &frame_start);
         b->second();
-        clock_gettime(CLOCK_MONOTONIC, &frame_end);
-        accumulatedMessagingDuration_ += timespecDiff(frame_start, frame_end);
     }
     
     // now check for new messages on our queue
     // get message
-    unsigned int messages_processed = 0;
-    unsigned int messages_onqueue = 1;
     std::string pool_name = actorName_ + "-POOL-";
 
-    requeued_ = false;
-    while (requeued_ == false && messages_onqueue>0 && messages_processed++ < MAX_MSGS_PER_TICK * (1+childActors_.size())) {   
+    unsigned int requeued = (unsigned long long) requeuedCount_;
+    while (requeuedCount_ == (unsigned long long) requeued) {   
         unsigned int messages_onqueue = useRequest(inbuffer_);
         if (messages_onqueue > 0 ) {
             //
@@ -195,10 +192,7 @@ void actorBase::tick()
                 else {
                     processedCount_++;
                     // call our action function
-                    clock_gettime(CLOCK_MONOTONIC, &frame_start);
                     c->second();
-                    clock_gettime(CLOCK_MONOTONIC, &frame_end);
-                    accumulatedMessagingDuration_ += timespecDiff(frame_start, frame_end);
                 }
             }
             //
@@ -280,7 +274,8 @@ void actorBase::tick()
                             //
                             auto pool_kid = apool.childActors_.find(inbuffer_.dest_);
                             assert (pool_kid != apool.childActors_.end());
-                            pool_kid->second->postRequest(inbuffer_);
+                            if (pool_kid->second->postRequest(inbuffer_) != BH_SUCCESS)
+                                requeueRequest(inbuffer_);
                         }
           
                         return;
@@ -298,7 +293,8 @@ void actorBase::tick()
                     //
                     // put it on correct child queue
                     //
-                    it->second->postRequest(inbuffer_);
+                    if (it->second->postRequest(inbuffer_) != BH_SUCCESS)
+                        requeueRequest(inbuffer_);
                     // not final destination, so don't wipe message
                 }
                 else {
@@ -315,12 +311,20 @@ void actorBase::tick()
                         //
                         // Pass to parent
                         //
-                        parentActor_->postRequest(inbuffer_);
+                        if (parentActor_->postRequest(inbuffer_) != BH_SUCCESS)
+                            requeueRequest(inbuffer_);
                     }
                 }
             }
         }
+        else {
+            break; // leave the while loop as no messages to process
+        }
     }
+            
+    // figure out load
+    clock_gettime(CLOCK_MONOTONIC, &frame_end);
+    tickTimings_.push(timespecDiff(frame_start, frame_end));
 }
 
 /* end of file */

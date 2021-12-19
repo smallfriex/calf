@@ -13,11 +13,6 @@
 #ifndef ACTOR_BASE_H
 #define ACTOR_BASE_H
 
-#define DEFAULT_SLEEP       20 // milliseconds
-#define DELAYED_SLEEP       1000
-#define MAX_MSGS_PER_TICK   10
-// NB: (1000 / DEFAULT_SLEEP) * MAX_MSGS_PER_TICK = mesage quantity an actor can process per second
-
 #include <string>
 #include <cstring>
 #include <queue>
@@ -31,6 +26,8 @@
 #include <iostream>
 #include <sstream>
 #include <utility>
+#include <condition_variable>
+#include <chrono>
 #if defined(__linux__)
 #include <sys/prctl.h>
 #endif
@@ -38,6 +35,8 @@
 #include "calf.hpp"
 #include "messageBase.hpp"
 #include "messageEvents.hpp"
+
+#define WAIT_TIME 1000 // ms
 
 typedef std::function<void(void)> ActionFunction;
 
@@ -143,14 +142,13 @@ public:
         return BH_SUCCESS;
     }
     
-    int postRequest(messageHolder& input);
+    int postRequest(messageHolder& input, bool blocking = false); // NB: prefer sendRequest() for posting to own mailbox
     
 protected:
 
     int useRequest(messageHolder& message);
-    int sendRequest(messageHolder& input);
-    int requeueRequest();
-    void msleep(int sleep_time = DEFAULT_SLEEP);
+    int sendRequest(messageHolder& input, bool blocking = true);
+    int requeueRequest(messageHolder& message);
     
     void registerAction(Message_T (*message_type)(void), ActionFunction member_function){
         actions_[message_type] = member_function;
@@ -176,11 +174,9 @@ protected:
     
     messageHolder inbuffer_;
     messageHolder outbuffer_;
-
-    int sleepTime_ = DEFAULT_SLEEP;
     
     std::queue<messageHolder> input_;
-    bool requeued_ = false;
+
     std::mutex messageLock_;
     
     std::map<Message_T (*)(void), ActionFunction> actions_;
@@ -201,10 +197,13 @@ private:
     
     std::thread* thisThread_ = 0;
     bool running_ = true;
+    std::mutex workLock_;
+    std::condition_variable messagesArrived_;
     unsigned long long processedCount_ = 0;
-    long latestHousekeepingDuration_ = 0;
-    long accumulatedMessagingDuration_ =0;
-    long latestMessagingDuration_ = 0;
+    unsigned long long requeuedCount_ = 0;
+
+    runningAverage<unsigned long long, 10> tickTimings_;
+
     ActorStatus status_ = CREATED;
 
     void setThreadName(void) {

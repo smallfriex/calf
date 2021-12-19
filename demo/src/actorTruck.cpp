@@ -36,18 +36,14 @@ void actorTruck::actionNewMinute(void) {
     userStatus_=2;
     
     // Get Ini stuff periodically
-    interval_ = getIni("Messaging","MOVE_INTERVAL", 1000); // basically, inverse of truck's speed   
+    movesPerTick_ = getIni("Messaging","MOVES_PER_TICK", 1); // basically truck's speed in metres per second 
 }
 
 void actorTruck::actionNewTick(void) {
-    userStatus_=9;
-    
-    if (tickCount_++ > interval_) {
-		tickCount_ = 0;
-		 
+    userStatus_=9; 
+	for (int mv = 0; mv < movesPerTick_; mv++) {
 		move();
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 void actorTruck::move(void) {

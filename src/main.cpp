@@ -24,7 +24,7 @@
 #include "actorLog.hpp"
 
 // constants
-const char* CALF_VERSION = "1.0";
+const char* CALF_VERSION = "1.1";
 #define NO_PARENT   0
 
 // user prototypes
@@ -61,8 +61,8 @@ void sigHandler(int s)
         {
             // Application State Report - ripple down through actors
             std::stringstream ss;
-            ss << "ASR | thread-status/userstatus | messages-queued/messages-processed | "
-               << "us-on-messages/us-on-housekeeping per min\n";
+            ss << "ASR | thread-status userstatus | messages queued/requeued/processed | "
+               << "load\n";
             top->reportActivity(ss,0);
             std::cout << "\n" << ss.str() << std::endl;
 			break;

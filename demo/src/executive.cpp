@@ -55,7 +55,7 @@ bool applicationRunLoop() {
     
 		messageReport* rmsg = new messageReport("Application has began");
 		SetMessageHolder_(outbuffer_,"REP", "TOP", rmsg); 	// NB: from exective use SetMessageHolder_ not SetMessageHolder
-		top->postRequest(outbuffer_); 						// NB: from exective, use postRequest not sendRequest
+		top->postRequest(outbuffer_, true);					// NB: from exective, use postRequest not sendRequest
 	}
     
     // This is where you would send any top-level

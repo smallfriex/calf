@@ -28,7 +28,7 @@ class actorTruck : public actorBase
 public:
     actorTruck(const ID& name, actorBase* parent_actor)
         : actorBase(name,parent_actor) {
-        userStatus_=-1;    
+        userStatus_=1;    
         // create any known child threads
             
         // register our actions
@@ -40,7 +40,7 @@ public:
     actorTruck(const actorTruck& other) = delete;
 
     actorTruck& operator=(const actorTruck& other) {
-        userStatus_=-2;
+        userStatus_=2;
         if (this == &other) return *this; // handle self assignment
         //assignment operator
         return *this;
@@ -71,12 +71,10 @@ protected:
 private:
 
     messagePoint location_;
-    
+    int movesPerTick_;
     std::queue<messagePoint*> callingStops_;
     messagePoint* destination_ = nullptr;
     
-    double interval_ = 100;
-    long tickCount_ = 0;
 };
 
 #endif // ACTOR_TRUCK_H

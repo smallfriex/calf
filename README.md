@@ -1,6 +1,6 @@
 # CALF: C++ Actor Light Framework
 
-CALF is cross-compatible lightweight open source implementation of the actor model for C++. Lightweight means there is not much code and, not many dependencies. In contrast to CAF: C++ Actor Framework, CALF aims to provide just the features you need with low overhead. Cross-compatible, it's been designed on linux using standard c++, compiled and tested on OSX, and should, if needed, run on Windows with some minor adjustments.
+CALF is a cross-compatible, lightweight, open source implementation of the actor model for C++. Lightweight means there is not much code and, not many dependencies. In contrast to CAF: C++ Actor Framework, CALF aims to provide just the features you need with low overhead. Cross-platform compatible, it was designed on a linux system using standard c++, has been compiled and tested on OSX, and should, if needed, run on Windows with some minor adjustments.
 
 ## Who is CALF for?
 
@@ -33,7 +33,7 @@ make
 will build a static library you can use in your project. Or, since there's not many files, you could reference the source code directly into your own build or `makefile`.
 
 * It doesn't make much sense to build a shared object of CALF — because it includes main() — so it can't be shared by multiple applications. It's a framework, not a utility library.
-* The use of std::threads will pull in a dependency on a thread implementation, typically pthreads on 'mix systems.
+* The use of std::threads will pull in a dependency on a thread implementation, typically pthreads on 'nix systems.
 * The CALF library has a dependency on pugixml, so you would need to build that. Thankfully, pugixml is also open-source, on github, and uses CMake. So:
 
 ~~~bash
