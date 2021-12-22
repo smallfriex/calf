@@ -24,8 +24,8 @@ void actorRouteManager::actionNewMinute(void) {
     //
     int requests = getIni("Routing","NUMBER_OF_REQUESTS_PER_MIN", 5);
     for (int i=0; i<requests; i++) {
-	int x = std::rand()/((RAND_MAX + 1u)/40);
-    	int y = std::rand()/((RAND_MAX + 1u)/40);
+	    int x = std::rand()/((RAND_MAX + 1u)/80);
+    	int y = std::rand()/((RAND_MAX + 1u)/80);
     	messagePoint* pmsg = new messagePoint(x,y);
     	SetMessageHolder(outbuffer_,"FLT", pmsg);
 		sendRequest(outbuffer_);

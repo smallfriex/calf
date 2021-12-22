@@ -80,8 +80,8 @@ void actorTruck::move(void) {
 		location_ += *vector;
 
 		// send this leg of journey to a tracker
-		ID dest = "FLT-POOL-JRN-" + actorName_;
-		SetMessageHolder(outbuffer_,dest, vector);
+		ActorID dest = "POOL-JRN";
+		SetPoolMessageHolder(outbuffer_,dest, vector, actorName_);
 		sendRequest(outbuffer_);
 		
 		// are we there yet?
@@ -93,7 +93,7 @@ void actorTruck::move(void) {
 			
 			// free up the tracker we used
 			eventFlushActor* efa = new eventFlushActor();
-            SetMessageHolder(outbuffer_,dest,efa);
+            SetPoolMessageHolder(outbuffer_, dest, efa, actorName_);
             sendRequest(outbuffer_);
 
 			// and report journey completion

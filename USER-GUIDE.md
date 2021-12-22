@@ -1,6 +1,6 @@
 
 # CALF User Guide
-version 1.1
+version 1.20
 
 To gain an understanding of the framework, I suggest you build and run the demo application included in this repository. Study the code and the program's output. Send a few send SIGTSTP signals (Ctrl-Z) to see the program's status, and then send a SIGKILL (Ctrl-C) to gracefully quit the demo.
 
@@ -13,8 +13,8 @@ When coding your own program using CALF, you'll want to start with a copy of `ex
 * There's no centralised *post office*, rather each actor can send messages to its direct children or parent. When a message is sent, if the framework doesn't find an addressee in the sending actor's children, the message will be passed to its parent, and the parent will first check its own address, and then check its children, and then pass on to its parent.
     * This is done that way so messages aren't bouncing around the family tree indefinitely. If a suitable mailbox isn't found by the time the message reaches the top-level actor, an error is raised (and you'll know you need to recode something).
     * This has pros and cons. One advantage is speed of messaging. If you have a well organised structure, messages only have a few hops and there's no bottleneck imposed by a centralised *post office* thread. The disadvantage is that you need to lay out your parent-child hierarchy carefully.
-    * So, each actor can reach any of its children, but not its grandchildren. And each actor can reach its parent, and grandparents, great-grandparents, and so on. It can also reach its aunties and uncles, great-auntie and great-uncles, but not its cousins. You can draw a family tree of your actors to check if sending actors can reach intended recipients with their messages, and if they can't, you can code an intermediary family member to receive the message type you want, re-address it, and send it on.
-    * The LOG and INI actors are created for you by the TOP actor so they can be reached by any actor.
+    * The LOG and INI actors are created for you by the top-level actor, which is also created, in main.
+    * You could, in theory, have several top-level actors (ones without parents) and the two family trees wouldn't be able to exchange messages. But the framework only creates one top-level actor for you.
 * You can create pools of actors of the same type and these pools can dynamically size as required.
     * Each pool can receive messages addressed as follows: PARENT-POOL-POOLNAME-TASKID. If an actor doesn't exist for that task id its created by the POOL and the message forwarded. 
     * From then on any message directed at that POOL's TASKID will be digested by that same POOL actor.  
@@ -46,10 +46,10 @@ void applicationCleanup();
 * There needs to be some boiler-plate code in each class you intend to use as a message type. I.e., at the top of the message class, within the public section, for messageLog, we have the line:
 
 ~~~cpp
-static Message_T typeName() {return __FILE__;}
+static Message_T typeName() {return MESSAGE_TYPE;}
 ~~~
 
-This static member function is used to distinguish the *type* of message being constructed, sent, and received. C++ doesn't support reflection, but using the predefinted macro __FILE__ works with most c++ compilers to provide a meaningful string useful for debugging – providing that the naming convention for message header files is adhered to – if not, then just use a unique string here instead. You'll also have to use a string literal if you intend to have more than one message definition per header file.
+This static member function is used to distinguish the *type* of message being constructed, sent, and received. C++ doesn't support reflection, but using the predefinted macro __FILE__, which works with most c++ compilers, we can get at a meaningful string useful for debugging – providing that the naming convention for message header files is adhered to – if not, then just use a unique string here instead. You'll also have to use a string literal if you intend to have more than one message definition per header file.
 
 Furthermore, the typeName must be passed into the baseMessage constructor in each message constructor, e.g.:
 

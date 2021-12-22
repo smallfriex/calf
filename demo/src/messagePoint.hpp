@@ -18,7 +18,7 @@
 class messagePoint : public messageBase
 {
 public:
-    static Message_T typeName() {return __FILE__;}
+    static Message_T typeName() {return MESSAGE_TYPE;}
         
     messagePoint() : messageBase(typeName) {
 		x_ = -1;
@@ -49,12 +49,10 @@ public:
 };
 
 bool operator== (const messagePoint& p1, const messagePoint& p2);
-
 std::basic_ostream<char>& operator<<(std::basic_ostream<char>& ss, const messagePoint& pm);
 
 // saves creating a whole new class
 #define messageVector messagePoint
-#define MESSAGE_VECTOR_H MESSAGE_POINT_H 
 
 #endif /* MESSAGE_POINT_H */
 

@@ -18,7 +18,7 @@
 class messageLog : public messageBase
 {
 public:
-    static Message_T typeName() {return __FILE__;}
+    static Message_T typeName() {return MESSAGE_TYPE;}
         
     enum LogLevel {LH_INFO=0, LH_WARN, LH_ERR};
 

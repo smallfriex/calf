@@ -23,11 +23,11 @@ class actorFleetManager : public actorBase
 {
 public:
 
-    actorFleetManager(const ID& name, actorBase* parent_actor)
+    actorFleetManager(const ActorID& name, actorBase* parent_actor)
         : actorBase(name,parent_actor) {
         
         // create any known child threads
-        createPool<actorJourneyTracker>("JRN");
+        createPool<actorJourneyTracker>("POOL-JRN");
 
         // register our actions
         registerAction(eventNewMinute::typeName, std::bind(&actorFleetManager::actionHousekeeping, this));

@@ -23,7 +23,7 @@
 class actorReport : public actorBase
 {
 public:
-    actorReport(const ID& name, actorBase* parent_actor)
+    actorReport(const ActorID& name, actorBase* parent_actor)
         : actorBase(name,parent_actor) {
         userStatus_=1;    
         // create any known child threads

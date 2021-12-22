@@ -35,7 +35,7 @@ void actorFleetManager::actionHousekeeping(void) {
 		for(int i=1; i<=fleet_size; i++)
 		{
 			// create new truck actor & initialize          
-			ID actor_name = "TRK-";
+			ActorID actor_name = "TRK-";
 			actor_name.append(std::to_string(i));
 			
 			truck = static_cast<actorTruck*>(spawnChildActor<actorTruck>(actor_name)); 
@@ -109,22 +109,22 @@ void actorFleetManager::actionReceivePointMessage(void) {
         }
     }
     if (truck_closest) {
-			// forward this message on to site actor
-			SetMessageHolder(outbuffer_, truck_closest->getActorName(), pmr);
-			sendRequest(outbuffer_);
-			
-			// and report on it
-			std::stringstream ss;
-			ss << "Sending truck: " << truck_closest->getActorName() << " to " << *pmr;
-			messageReport* rmsg = new messageReport(ss.str());
-			SetMessageHolder(outbuffer_,"REP", rmsg);
-			sendRequest(outbuffer_);
+		// forward this message on to site actor
+		SetMessageHolder(outbuffer_, truck_closest->getActorName(), pmr);
+		sendRequest(outbuffer_);
+		
+		// and report on it
+		std::stringstream ss;
+		ss << "Sending truck: " << truck_closest->getActorName() << " to " << *pmr;
+		messageReport* rmsg = new messageReport(ss.str());
+		SetMessageHolder(outbuffer_,"REP", rmsg);
+		sendRequest(outbuffer_);
 	} else {
-			SendLogEntry(LogLevel::LH_ERR, "Can't find a truck");
-			
-			// always wipe message holders when finished with data
-			WipeMessageHolder<messagePoint>(inbuffer_);
-			// apart from when you pass them on somewhere else!
+		SendLogEntry(LogLevel::LH_ERR, "Can't find a truck");
+		
+		// always wipe message holders when finished with data
+		WipeMessageHolder<messagePoint>(inbuffer_);
+		// apart from when you pass them on somewhere else!
 	}
    
 }

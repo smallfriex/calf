@@ -24,7 +24,7 @@
 class actorJourneyTracker : public actorBase
 {
 public:
-    actorJourneyTracker(const ID& name, actorBase* parent_actor)
+    actorJourneyTracker(const ActorID& name, actorBase* parent_actor)
         : actorBase(name,parent_actor) {
         userStatus_=1;    
         // create any known child threads
@@ -51,6 +51,7 @@ protected:
 private:
 
     std::string journey_;
+    TaskID latestTask_;
 
 };
 

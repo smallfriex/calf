@@ -24,7 +24,7 @@ class actorLog : public actorBase {
 public:
 
     // de/constructor
-    actorLog(const ID& name, actorBase* parent_actor)
+    actorLog(const ActorID& name, actorBase* parent_actor)
         : actorBase(name,parent_actor)
     {
         // create any known child actors

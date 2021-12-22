@@ -28,6 +28,7 @@
 #include <utility>
 #include <condition_variable>
 #include <chrono>
+#include <mutex>
 #if defined(__linux__)
 #include <sys/prctl.h>
 #endif
@@ -35,8 +36,11 @@
 #include "calf.hpp"
 #include "messageBase.hpp"
 #include "messageEvents.hpp"
+#include "messageEpoch.hpp"
 
 #define WAIT_TIME 1000 // ms
+
+#define TEMP_NAME "_tempname"
 
 typedef std::function<void(void)> ActionFunction;
 
@@ -55,8 +59,8 @@ class actorBase;
 struct actorPool {
    actorPool(std::function<actorBase*(void)> cc) 
    : childConstructor_(cc) {}
-   std::vector<ID> childActorsLookup_;
-   std::map<ID, actorBase*> childActors_;
+   std::vector<ActorID> childActorsLookup_;
+   std::map<ActorAddress, actorBase*> childActors_;
    std::function<actorBase*(void)> childConstructor_;
 };
 
@@ -74,9 +78,17 @@ public:
     static const int BH_LAST        = 4;
         
     // de/constructor
-    actorBase(const ID& name, actorBase* parent_actor) {
-        actorName_ = name;
-        parentActor_ = parent_actor;
+    actorBase(const ActorID& name, actorBase* parent_actor) : actorName_(name), parentActor_(parent_actor) {
+        // register new actor with directory if not part of a pool (naming is deferred to thread-start)
+        if (name.compare(TEMP_NAME) != 0) {
+            ActorAddress parentAddress;
+            int parentChildrenCount = 0;
+            if (parent_actor != nullptr) {
+                parentAddress  = parent_actor->getActorAddress();
+                parentChildrenCount = parent_actor->childrenCreated();
+            }
+            actorAddress_ = directory_.add(name, parentAddress, parentChildrenCount);
+        }
     }
 
     virtual ~actorBase() {
@@ -86,12 +98,13 @@ public:
         for (auto child : childActors_) {
             delete child.second;
         }
-        for (auto& pool : childPools_) {
-        for (auto& pool_child : pool.second.childActors_) {
-            delete pool_child.second;
+        for (auto& pool : ourPools_) {
+            for (auto& pool_child : pool.second.childActors_) {
+                delete pool_child.second;
+            }
         }
+        directory_.remove(actorName_);
     }
-    };
 
     // remove unwanted constructors
     actorBase() = delete;
@@ -100,54 +113,53 @@ public:
     virtual int start();
     virtual int finish();
     
-    ID getActorName() {return actorName_;}
+    ActorID getActorName() {return actorName_;}
+    ActorAddress& getActorAddress() {return actorAddress_;}
+    unsigned int childrenCreated() {return childrenCreated_;}
     void reportActivity(std::stringstream& output, int level = 0);
     
     // methods to add child thread / pools
     // returns ptr in case it needs to be started - i.e., not spawned in Constructor
     template <class T>
-    actorBase* spawnChildActor(const ID& name) {
+    actorBase* spawnChildActor(const ActorID& name) {
         if (name.empty()) {
-            std::cerr << "Cannot spawn empty actor" << std::endl;
-            return 0;
-        }
-        auto check = childActors_.find(name);
-        if (check != childActors_.end()) {
-            std::cerr << "Cannot spawn repeat actor: "<< name << std::endl; 
+            std::cerr << actorName_ << "cannot spawn actor with empty name" << std::endl;
             return 0;
         }
         // create a new child
         actorBase* newActor = new T(name, this);
-        childActors_.insert(std::make_pair(name, newActor));
+        childrenCreated_++;
+        childActors_.insert(std::make_pair(newActor->getActorAddress(), newActor));
         return newActor;
     }
     
     template <class T>
-    int createPool(const ID& name) {    
-        if (name.empty()) {
-            std::cerr << "Cannot create empty pool" << std::endl;
+    int createPool(const ActorID& poolname) {    
+        if (poolname.length() <= 5 || poolname.compare(0, 5, "POOL-") != 0) {
+            std::cerr << "Pools must follow the naming convention POOL-poolname" << std::endl;
             return BH_FAILURE;
         }
-        // create pool name for us
-        std::string pool_name = actorName_ + "-POOL-" + name;
+
         //check uniqueness
-        auto check = childPools_.find(pool_name);
-        if (check != childPools_.end()) {
-            std::cerr << "Cannot create repeat pool: "<< pool_name << std::endl; 
+        auto check = ourPools_.find(poolname);
+        if (check != ourPools_.end()) {
+            std::cerr << "Cannot create repeat pool: "<< poolname << std::endl; 
             return BH_NOTUNIQUE;
         }
         // create new pool & set its child constructor
-        childPools_.insert(std::make_pair(pool_name,actorPool([&](){return new T("dummy",this);})));
+        ourPools_.insert(std::make_pair(poolname,actorPool([&](){return new T(TEMP_NAME,this);})));
+        // register ourself as the pool controller
+        directory_.add(poolname, actorAddress_);
      
         return BH_SUCCESS;
     }
     
-    int postRequest(messageHolder& input, bool blocking = false); // NB: prefer sendRequest() for posting to own mailbox
+    int postRequest(messageHolder& input, bool blocking = true); // NB: prefer sendRequest() for posting to own mailbox
     
 protected:
 
     int useRequest(messageHolder& message);
-    int sendRequest(messageHolder& input, bool blocking = true);
+    int sendRequest(messageHolder& input, bool blocking = false);
     int requeueRequest(messageHolder& message);
     
     void registerAction(Message_T (*message_type)(void), ActionFunction member_function){
@@ -155,12 +167,12 @@ protected:
     }
     
     // helpers
-    ID translateID(std::string pool_name, size_t index) {
-        ID id = pool_name + "-ID-" + std::to_string(index);
+    ActorID translateID(std::string pool_name, size_t index) {
+        ActorID id = pool_name + "-ID-" + std::to_string(index);
         return id;
     }
     
-    size_t translateIndex(ID actor_name) {
+    size_t translateIndex(ActorID actor_name) {
         size_t index = actor_name.rfind("-ID-");
         if (index == std::string::npos) {
             std::cerr << "cannot translate index on: " << actor_name << std::endl;
@@ -170,7 +182,8 @@ protected:
         return std::stoi(id);
     }
     
-    ID actorName_ = "";
+    ActorID actorName_ = "";
+    ActorAddress actorAddress_;
     
     messageHolder inbuffer_;
     messageHolder outbuffer_;
@@ -184,8 +197,8 @@ protected:
     messageEpoch minutesSinceEpoch_;
     messageEpoch mseRolling_;
     
-    std::map<ID, actorBase*> childActors_;
-    std::map<ID, actorPool> childPools_;
+    std::map<ActorAddress, actorBase*> childActors_;
+    std::map<ActorID, actorPool> ourPools_;
     
     actorBase* parentActor_;
     int userStatus_ = 0;
@@ -201,11 +214,12 @@ private:
     std::condition_variable messagesArrived_;
     unsigned long long processedCount_ = 0;
     unsigned long long requeuedCount_ = 0;
-
     runningAverage<unsigned long long, 10> tickTimings_;
 
     ActorStatus status_ = CREATED;
-
+    AddressElement childrenCreated_ = 0;
+    static Directory directory_;
+    
     void setThreadName(void) {
 
 #ifdef _WIN32

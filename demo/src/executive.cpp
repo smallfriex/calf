@@ -39,9 +39,9 @@ void applicationPreLaunch() {
 }
 
 void applicationAddInitialActors() {
+    top->spawnChildActor<actorReport>("REP")->start();
     top->spawnChildActor<actorRouteManager>("RTE")->start();
     top->spawnChildActor<actorFleetManager>("FLT")->start();
-    top->spawnChildActor<actorReport>("REP")->start();
 }
 
 bool applicationRunLoop() {

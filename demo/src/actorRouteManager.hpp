@@ -21,7 +21,7 @@ class actorRouteManager : public actorBase
 {
 public:
 
-    actorRouteManager(const ID& name, actorBase* parent_actor)
+    actorRouteManager(const ActorID& name, actorBase* parent_actor)
         : actorBase(name,parent_actor) {
         
         // create any known child threads

@@ -22,8 +22,9 @@
 
 #define FREE std::string("free")
 
-int actorBase::useRequest(messageHolder& message)
-{
+class messageReport;
+
+int actorBase::useRequest(messageHolder& message) {
     messageLock_.lock();
     size_t size = input_.size();
     if (size > 0) {
@@ -44,12 +45,15 @@ int actorBase::requeueRequest(messageHolder& message) {
 }
 
 int actorBase::sendRequest(messageHolder& input, bool blocking) {
+    if (input.destAddr_.empty()) {
+        input.destAddr_ = directory_.find(input.dest_);
+    }
     bool lock = true;
     if (blocking)
         messageLock_.lock(); 
     else
         lock = messageLock_.try_lock();
-    if (lock) {
+    if (lock) {    
         input_.push(input);
         messageLock_.unlock();
         return BH_SUCCESS;
@@ -85,9 +89,9 @@ void actorBase::reportActivity(std::stringstream& output, int level) {
     output << actorName_ << " | status: " << status_ << " " << userStatus_
            << " | messages: " << std::setw(6) << std::setfill(' ') << messageSummary      
            << " | load: "     << std::setw(7) << std::setfill('0') << std::fixed << std::setprecision(3) << percentage << "%\n";
-    for (auto& pool : childPools_) {
+    for (auto& pool : ourPools_) {
         for (int t=0; t<level; t++) {output << "\t";}
-        output << "- POOL: " << pool.first << "\n";
+        output << "- " << pool.first << ":\n";
         for (auto& pool_child : pool.second.childActors_) {
             pool_child.second->reportActivity(output, level + 1);
         }
@@ -101,8 +105,7 @@ void actorBase::reportActivity(std::stringstream& output, int level) {
     }
 }
 
-void actorBase::execute()
-{
+void actorBase::execute() {
     status_ = STARTED;
     // start child threads we know about
     for (auto& child : childActors_) {
@@ -136,7 +139,7 @@ void actorBase::execute()
     for (auto& child : childActors_) {
         child.second->finish(); 
     }
-    for (auto& pool : childPools_) {
+    for (auto& pool : ourPools_) {
         for (auto& child : pool.second.childActors_) {
         child.second->finish(); 
         }
@@ -146,8 +149,7 @@ void actorBase::execute()
     }
 }
 
-void actorBase::tick() 
-{   
+void actorBase::tick() {   
     struct timespec frame_start, frame_end;
     clock_gettime(CLOCK_MONOTONIC, &frame_start);
 
@@ -165,58 +167,69 @@ void actorBase::tick()
     if (b != actions_.end())  {
         b->second();
     }
-    
-    // now check for new messages on our queue
-    // get message
-    std::string pool_name = actorName_ + "-POOL-";
 
     unsigned int requeued = (unsigned long long) requeuedCount_;
     while (requeuedCount_ == (unsigned long long) requeued) {   
         unsigned int messages_onqueue = useRequest(inbuffer_);
         if (messages_onqueue > 0 ) {
             //
-            // is it for us?
+            // if there's no destination address, then look one up now
             //
-            if (inbuffer_.dest_.compare(actorName_) == 0) {
-                //
-                // consume this message
-                //
-                auto c = actions_.find(inbuffer_.payload_->type_);
-                if (c == actions_.end()) {
-                    std::stringstream ss;
-                    ss << "Actor: " << getActorName() << " cannot process"
-                    << " Message: " << inbuffer_.payload_->type_()
-                    << " From: " << inbuffer_.from_;
-                    std::cerr << ss.str() << std::endl;
-                }
-                else {
-                    processedCount_++;
-                    // call our action function
-                    c->second();
-                }
+            if (inbuffer_.destAddr_.empty()) {
+                inbuffer_.destAddr_ = directory_.find(inbuffer_.dest_);
             }
             //
-            // Is it for one of our pool children?
+            // is it for us?
             //
-            else if (inbuffer_.dest_.compare(0, pool_name.length(), pool_name) == 0) {
-                // find correct pool
-                for (auto& pool: childPools_) {
-                    if (inbuffer_.dest_.compare(0, pool.first.length(), pool.first) == 0) {
+            if (inbuffer_.destAddr_ == actorAddress_) {
+                //
+                // Check name to confirm we should consume this
+                //
+                if (inbuffer_.dest_.compare(actorName_) == 0) {
+                    //
+                    // consume this message
+                    //
+                    auto c = actions_.find(inbuffer_.payload_->type_);
+                    if (c == actions_.end()) {
+                        std::stringstream ss;
+                        ss << "Actor: " << getActorName() << " cannot process"
+                        << " Message Type: " << inbuffer_.payload_->type_()
+                        << " From: " << inbuffer_.from_;
+                        std::cerr << ss.str() << std::endl;
+                    }
+                    else {
+                        processedCount_++;
+                        // call our action function
+                        c->second();
+                    }
+                }
+                //
+                // Is it a pool command
+                //
+                else if (inbuffer_.dest_.compare(0, 4, "POOL") == 0) {
+                    //
+                    // find correct pool from our pools
+                    //
+                    auto pool_search = ourPools_.find(inbuffer_.dest_);
+                    if (pool_search == ourPools_.end()) {
+                        std::cerr << actorName_ << " doesn't have a pool for: " << inbuffer_.dest_ << std::endl;
+                    }
+                    else {
                         //
                         // found correct pool
                         //
-                        actorPool& apool = const_cast<actorPool&>(pool.second);
+                        actorPool& the_pool = const_cast<actorPool&>(pool_search->second);
                         //
                         // first check if it's a command for the pool controller - us
                         //
-                        if (inbuffer_.dest_.compare(pool.first) == 0) {                           
+                        if (inbuffer_.taskId_.empty()) {                           
                             // consume this message
                             if (inbuffer_.isType(eventFlushActor::typeName)) {
                                 
                                 // flush has returned from POOL - free this actor for reuse
                                 size_t index = translateIndex(inbuffer_.from_); 
-                                assert (index < apool.childActorsLookup_.size()); 
-                                apool.childActorsLookup_[index] = FREE;
+                                assert (index < the_pool.childActorsLookup_.size()); 
+                                the_pool.childActorsLookup_[index] = FREE;
 
                                 // we've consumed the message, so wipe
                                 WipeMessageHolder<eventFlushActor>(inbuffer_);
@@ -230,65 +243,84 @@ void actorBase::tick()
                             //
                             // Must be for one of this pool's children
                             //
-                           
+                        
                             // check there is a thread to receive the message, and if not create one                            
-                            std::vector<ID>::iterator it = std::find(apool.childActorsLookup_.begin(),
-                                                                     apool.childActorsLookup_.end(),
-                                                                       inbuffer_.dest_);    
-                            if (it == apool.childActorsLookup_.end()) {
+                            std::vector<ActorID>::iterator it = std::find(the_pool.childActorsLookup_.begin(),
+                                                                        the_pool.childActorsLookup_.end(),
+                                                                        inbuffer_.taskId_);    
+                            if (it == the_pool.childActorsLookup_.end()) {
 
                                 // not found - try to assign existing free
-                                it = std::find(apool.childActorsLookup_.begin(),
-                                               apool.childActorsLookup_.end(),
-                                               FREE);  
-                                if (it != apool.childActorsLookup_.end()) { 
+                                it = std::find(the_pool.childActorsLookup_.begin(),
+                                            the_pool.childActorsLookup_.end(),
+                                            FREE);  
+                                if (it != the_pool.childActorsLookup_.end()) { 
                                     //
                                     // lets reuse this one 
                                     //
-                                    *it = inbuffer_.dest_;
-
+                                    *it = inbuffer_.taskId_;
                                 }
                                 else {
-
+                                    //
                                     // failing that, create a new thread and kick it off
                                     // add to lookup first
-                                    apool.childActorsLookup_.push_back(inbuffer_.dest_); 
+                                    the_pool.childActorsLookup_.push_back(inbuffer_.taskId_); 
                                     // then find it - keeps semantics simple
-                                    it = std::find(apool.childActorsLookup_.begin(),
-                                                   apool.childActorsLookup_.end(), 
-                                                   inbuffer_.dest_); 
-                                    // then proceed as usual, but create thread first
-                                    ID new_id = translateID(pool.first, std::distance(apool.childActorsLookup_.begin(),it));
-                                    actorBase* newActor = apool.childConstructor_();
-                                    newActor->actorName_ = new_id;
-                                    apool.childActors_.insert(std::make_pair(new_id, newActor));
-                                    newActor->start();
+                                    it = std::find(the_pool.childActorsLookup_.begin(),
+                                                the_pool.childActorsLookup_.end(), 
+                                                inbuffer_.taskId_); 
+                                    // then proceed as usual, but create actor & start thread first
+                                    ActorID new_id = translateID(pool_search->first, std::distance(the_pool.childActorsLookup_.begin(),it));
+                                    actorBase* new_actor = the_pool.childConstructor_();
+                                    ActorAddress new_address = directory_.add(new_id, actorAddress_, childrenCreated_);
+                                    childrenCreated_++;
+                                    new_actor->actorName_   = new_id; // have to et name from TEMP_NAME
+                                    new_actor->actorAddress_= new_address; // and now we know adress, set that
+                                    the_pool.childActors_.insert(std::make_pair(new_address, new_actor)); // and add to our children
+                                    new_actor->start();
                                 }     
                             }
+                            // set new correct destination address using lookup        
+                            auto poolChildId = translateID(pool_search->first, std::distance(the_pool.childActorsLookup_.begin(),it));
+                            inbuffer_.dest_ = poolChildId;
+                            inbuffer_.destAddr_ = directory_.find(poolChildId);
+                            // TODO: Could have some audit trail when messages are rerouted like this
 
-                            // translate the dest from the lookup value               
-                            inbuffer_.dest_ = translateID(pool.first, std::distance(apool.childActorsLookup_.begin(),it));
-
-                            //
-                            // post message to pool child's queue
-                            //
-                            auto pool_kid = apool.childActors_.find(inbuffer_.dest_);
-                            assert (pool_kid != apool.childActors_.end());
-                            if (pool_kid->second->postRequest(inbuffer_) != BH_SUCCESS)
-                                requeueRequest(inbuffer_);
+                            // and we need to post it to the correct child - each pool has its own childActors_ map of pointers
+                            auto poolkid = the_pool.childActors_.find(inbuffer_.destAddr_);
+                            if (poolkid != the_pool.childActors_.end()) {
+                                //
+                                // put it on correct child queue
+                                //
+                                poolkid->second->postRequest(inbuffer_, true);
+                                // not final destination, so don't wipe message
+                            } else {
+                                // raise an error - destination could be wrong or destination actor could have been deleted
+                                std::cerr << "pool child " <<  inbuffer_.dest_ << " (" << inbuffer_.destAddr_ << ")"
+                                          << "not found for message from " << inbuffer_.from_ << " - presumed actor finished" << std::endl;
+                                // wipe as best we can - NB: may not call derived destructors
+                                delete inbuffer_.payload_; 
+                            }
                         }
-          
-                        return;
-                    }
+                    }       
+                } else {
+                    std::cerr << "message to" << inbuffer_.dest_ << " actor (" << inbuffer_.destAddr_ << ") from "
+                              << inbuffer_.from_ << " seems to be for us, but we can't find a way to consume it" << std::endl;
+                    std::cerr << "message to : " << inbuffer_.dest_ << std::endl;
+                    // wipe as best we can - NB: may not call derived destructors
+                    delete inbuffer_.payload_; 
                 }
-                std::cerr << "we don't have a pool for: " << inbuffer_.dest_ << std::endl;                
-            }
+            }  
             //
-            // Could it be for one of our direct children?
+            // Could it be for one of our progeny?
             //
-            else {
-                // search for child
-                auto it = childActors_.find(inbuffer_.dest_);
+            else if (inbuffer_.destAddr_.contains(actorAddress_)) {
+                // it is, so pass it to correct child
+                ActorAddress childAddr = actorAddress_;
+                childAddr.push_back(inbuffer_.destAddr_[actorAddress_.size()]);
+            
+                // search for correct child
+                auto it = childActors_.find(childAddr);
                 if (it != childActors_.end()) {
                     //
                     // put it on correct child queue
@@ -296,24 +328,31 @@ void actorBase::tick()
                     if (it->second->postRequest(inbuffer_) != BH_SUCCESS)
                         requeueRequest(inbuffer_);
                     // not final destination, so don't wipe message
+                } else {
+                    // raise an error - destination could be wrong or destination actor could have been deleted
+                    std::cerr << inbuffer_.dest_ << " actor (" << inbuffer_.destAddr_ << ") not found for message from "
+                              << inbuffer_.from_ << " - presumed actor finished" << std::endl;
+                    // wipe as best we can - NB: may not call derived destructors
+                    delete inbuffer_.payload_; 
+                }
+            }
+            //
+            // If destination isn't a descendent of ours, it's a descendent of a parent of ours
+            //
+            else {
+                if (parentActor_ == 0) {
+                    // raise an error - destination could be wrong or destination actor could have been deleted
+                    std::cerr << inbuffer_.dest_ << " actor (" << inbuffer_.destAddr_ << ") not found for message from "
+                            << inbuffer_.from_ << " - end of the line" << std::endl;
+                    // wipe as best we can - NB: may not call derived destructors
+                    delete inbuffer_.payload_; 
                 }
                 else {
                     //
-                    // if we can't find mailbox, pass to parent
+                    // Pass to parent
                     //
-                    if (parentActor_ == 0) {
-                        std::cerr << inbuffer_.dest_ << " actor - not found for message from " << inbuffer_.from_ << std::endl;
-                        // wipe as best we can - NB: may not call derived destructors
-                        delete inbuffer_.payload_; 
-                        // TODO: Could requeue these 
-                    }
-                    else {
-                        //
-                        // Pass to parent
-                        //
-                        if (parentActor_->postRequest(inbuffer_) != BH_SUCCESS)
-                            requeueRequest(inbuffer_);
-                    }
+                    if (parentActor_->postRequest(inbuffer_) != BH_SUCCESS)
+                        requeueRequest(inbuffer_);
                 }
             }
         }
@@ -326,5 +365,7 @@ void actorBase::tick()
     clock_gettime(CLOCK_MONOTONIC, &frame_end);
     tickTimings_.push(timespecDiff(frame_start, frame_end));
 }
+
+Directory actorBase::directory_;
 
 /* end of file */

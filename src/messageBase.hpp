@@ -15,41 +15,93 @@
 
 #include <cassert>
 #include <string>
+#include "calf.hpp"
 
 typedef const char* Message_T;
 
+#define MESSAGE_TYPE (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)      
+
 class messageBase {
+
 public:
+
     messageBase() = delete;
-    messageBase(Message_T (*type_of)(void)) : type_(type_of) {}
+    messageBase(Message_T (*type_of)(void)) : type_(type_of) {
+#ifndef NDEBUG
+        messageId_ = generateMessageId();
+#endif
+    }
     virtual ~messageBase() = default;
     bool isType(Message_T (*test)(void)) {return (test == type_);}
     Message_T (*type_)(void) = nullptr;
+    std::string messageId_;
+
+    static std::string generateMessageId()
+    {
+        const int MESSAGE_ID_LEN = 37;
+        time_t t;
+        struct tm *tm;
+
+        std::string ret;
+        ret.resize(15);
+
+        time(&t);
+        tm = gmtime(&t);
+
+        strftime(const_cast<char *>(ret.c_str()),
+                MESSAGE_ID_LEN,
+                "%Y%m%d%H%M%S.",
+                tm);
+
+        ret.reserve(MESSAGE_ID_LEN);
+
+        static const char alphanum[] =
+                "0123456789"
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                "abcdefghijklmnopqrstuvwxyz";
+
+        while (ret.size() < MESSAGE_ID_LEN) {
+            ret += alphanum[rand() % (sizeof(alphanum) - 1)];
+        }
+
+        return ret;
+    }
+
 };
 
-typedef std::string ID;
-
-class messageHolder
-{
+class messageHolder {
     // Sender has responsibility to malloc payload
     // End User has responsibility to delete payload
 public:
     messageHolder() {}
     
-    messageHolder(const char* destination, const char* from, messageBase* data) {
-        init(destination, from, data);
+    messageHolder(const char* destination, const char* from, messageBase* data, const char* task_id = "") {
+        init(destination, from, data, task_id);
     }
     
     messageHolder (const messageHolder& obj) {
         dest_ = obj.dest_;
         from_ = obj.from_;
-        payload_ = obj.payload_;
+        taskId_   = obj.taskId_;
+        destAddr_ = obj.destAddr_;
+        payload_  = obj.payload_;
     }
 
-    void init(const ID& destination, const ID& from, messageBase* data) {
+    messageHolder& operator=(const messageHolder& obj) {
+        dest_ = obj.dest_;
+        from_ = obj.from_;
+        taskId_   = obj.taskId_;
+        destAddr_ = obj.destAddr_;
+        payload_  = obj.payload_;
+        return *this;
+    }
+
+    void init(const ActorID& destination, const ActorID& from, messageBase* data, const TaskID& task_id) {
         dest_ = destination;
         from_ = from;
-        payload_ = data;
+        destAddr_.clear();
+        payload_  = data;
+        taskId_   = task_id;
         requeued_ = 0;
     }
 
@@ -59,18 +111,21 @@ public:
 
     bool isType(Message_T (*test)(void)) {return payload_->isType(test);}
 
-    ID dest_ = "";
-    ID from_ = "";
+    ActorID dest_  = "";
+    ActorID from_  = "";
+    TaskID taskId_ = "";
+    ActorAddress destAddr_;
     messageBase* payload_ = 0;
     unsigned int requeued_ = 0;
 };
 
 // helper to get sent from
-#define SetMessageHolder(a,b,c)    SetMessageHolder_(a,b,actorName_,c) 
+#define SetMessageHolder(a,b,c)     SetMessageHolder_(a,b,actorName_,c)
+#define SetPoolMessageHolder(a,b,c,d) SetMessageHolder_(a,b,actorName_,c,d) 
 
 template <class payloadT>
-int SetMessageHolder_(messageHolder& mh, const ID& dest, const ID& from, const payloadT* payload) {
-    mh.init(dest,from,(messageBase*) payload);
+int SetMessageHolder_(messageHolder& mh, const ActorID& dest, const ActorID& from, const payloadT* payload, const TaskID& task = "") {
+    mh.init(dest,from,(messageBase*) payload, task);
     return 0;
 }
 
@@ -90,8 +145,6 @@ payloadT* GetMessagePtr(const messageHolder& mh) {
     return retObj;
 }
 
-#endif /* MESSAGE_BASE_H */
-
 /* Note: C++ doesn't natively support reflection, so I've used addresses of static pointers
    to identifity message types. This is fast, adding little overhead for message construction
    or distinguishing and you can still print a message type by dereferencing, which is useful
@@ -103,5 +156,7 @@ payloadT* GetMessagePtr(const messageHolder& mh) {
    because even if you convert a pointer address into an integer somehow, the compiler will
    want something constanst at compile-time in the case statements.
 */
+
+#endif /* MESSAGE_BASE_H */
 
 /* end of file */

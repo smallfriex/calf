@@ -20,7 +20,7 @@
 class messageReport : public messageBase
 {
 public:
-    static Message_T typeName() {return __FILE__;}
+    static Message_T typeName() {return MESSAGE_TYPE;}
     
     messageReport(const std::string& message) : messageBase(typeName) {
         data_.reserve(512);

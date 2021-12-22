@@ -18,7 +18,6 @@
 #include <iostream>
 
 #include "actorBase.hpp"
-
 #include "messagePoint.hpp"
 
 enum TruckStatus {FREE = 0, RESTING, BUSY};
@@ -26,7 +25,7 @@ enum TruckStatus {FREE = 0, RESTING, BUSY};
 class actorTruck : public actorBase
 {
 public:
-    actorTruck(const ID& name, actorBase* parent_actor)
+    actorTruck(const ActorID& name, actorBase* parent_actor)
         : actorBase(name,parent_actor) {
         userStatus_=1;    
         // create any known child threads

@@ -18,16 +18,6 @@
 #include <unistd.h>
 #include <time.h>
 
-std::string messageEpoch::to_string(bool local_time) const {
-    // may be able to make more efficient by not converting to time_t
-    time_t t = 60 * minutesSinceEpoch_;
-    struct tm* this_tm = local_time ? localtime(&t): gmtime(&t);
-    static char timeText[80];
-    strftime(timeText, sizeof(timeText), "%FT%R", this_tm);
-    std::string asString = timeText;
-    return asString;
-}
-
 unsigned long long timespecDiff(struct timespec& start, struct timespec& end) {
     long secs = difftime(end.tv_sec, start.tv_sec);
     if (secs == 0) {
@@ -38,8 +28,7 @@ unsigned long long timespecDiff(struct timespec& start, struct timespec& end) {
     }
 }
 
-std::string dateTimeNow()
-{
+std::string dateTimeNow() {
     const int RFC5322_TIME_LEN = 32;
     time_t t;
     struct tm *tm;
@@ -51,37 +40,6 @@ std::string dateTimeNow()
     tm = localtime(&t);
 
     strftime(&ret[0], RFC5322_TIME_LEN, "%a, %d %b %Y %H:%M:%S %z", tm);
-
-    return ret;
-}
-
-std::string generateMessageId()
-{
-    const int MESSAGE_ID_LEN = 37;
-    time_t t;
-    struct tm *tm;
-
-    std::string ret;
-    ret.resize(15);
-
-    time(&t);
-    tm = gmtime(&t);
-
-    strftime(const_cast<char *>(ret.c_str()),
-             MESSAGE_ID_LEN,
-             "%Y%m%d%H%M%S.",
-             tm);
-
-    ret.reserve(MESSAGE_ID_LEN);
-
-    static const char alphanum[] =
-            "0123456789"
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "abcdefghijklmnopqrstuvwxyz";
-
-    while (ret.size() < MESSAGE_ID_LEN) {
-        ret += alphanum[rand() % (sizeof(alphanum) - 1)];
-    }
 
     return ret;
 }
@@ -98,8 +56,7 @@ void show_stackframe() {
 	printf("[bt] %s\n", messages[i]);
 }
 
-int runProcess(std::string path, bool wait)
-{
+int runProcess(std::string path, bool wait) {
     pid_t PID = 0;
     if (wait == false)
         PID = fork();
@@ -109,5 +66,46 @@ int runProcess(std::string path, bool wait)
     }
     return (int) PID;        
 }
+
+basic_ostream<char>& operator<<(basic_ostream<char>& os, const ActorAddress& addr) {
+    for (auto obj : addr) {
+        os << obj << ".";
+    }
+    return os;
+}
+
+void Directory::add(const ActorID& name, const ActorAddress& address) {
+    std::lock_guard<std::mutex> lock_{this->directoryLock_};
+    directory_[name] = address;
+}
+
+ActorAddress& Directory::add(const ActorID& name, const ActorAddress& parentAddr, AddressElement uniqueNumeral) {
+    // TODO: Could check for duplicate names and throw error
+                
+    // start with a copy of parent
+    ActorAddress address = parentAddr;
+    // go deeper
+    address.push_back(uniqueNumeral);
+    // add to the directory and return reference
+    std::lock_guard<std::mutex> lock_{this->directoryLock_};
+    return directory_[name] = address;
+}
+
+void Directory::remove(const ActorID& name) {
+    std::lock_guard<std::mutex> lock_{this->directoryLock_};
+    directory_.erase(name);
+}
+
+ActorAddress Directory::find(const ActorID& name) {
+    std::lock_guard<std::mutex> lock_{this->directoryLock_};
+    auto pair = directory_.find(name);
+    if (pair == directory_.end()) {
+        ActorAddress emptyAddress{};
+        return emptyAddress;
+    }
+    else {
+        return pair->second;
+    }
+} 
 
 /* end of file */

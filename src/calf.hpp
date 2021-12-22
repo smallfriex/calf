@@ -10,8 +10,8 @@
  * Changed
  */
 
-#ifndef MESSAGE_EPOCH_H
-#define MESSAGE_EPOCH_H
+#ifndef CALF_H
+#define CALF_H
 
 #include <string>
 #include <cstring>
@@ -19,7 +19,16 @@
 #include <ctime>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "messageBase.hpp"
+#include <vector>
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <map>
+using namespace std;
+
+//
+// Misc Utility stuff
+//
 
 template <class objectT, unsigned int sz>
 class runningAverage {
@@ -70,86 +79,6 @@ private:
     double divisor_ = 0;
 };
 
-class messageEpoch : public messageBase {
-public:
-    static Message_T typeName() {return "messageEpoch";}
-
-    messageEpoch() : messageBase(typeName) {
-        minutesSinceEpoch_=0;
-    }
-    
-    messageEpoch(time_t tm) : messageBase(typeName) {
-        minutesSinceEpoch_ = floor(tm / 60);
-    }
-    
-    messageEpoch(const unsigned long long&  minutes) : messageBase(typeName) {
-        minutesSinceEpoch_ = minutes;
-    }
-    
-    messageEpoch(const messageEpoch& obj) : messageBase(typeName) {
-        minutesSinceEpoch_ = obj.minutesSinceEpoch_;
-    }
-    
-    messageEpoch(std::string asString) : messageBase(typeName) {
-        struct tm when;
-        memset(&when, 0, sizeof(struct tm));
-        strptime(asString.c_str(),"%F%TR", &when);
-        minutesSinceEpoch_ = floor(timegm(&when) / 60);
-    }
-    
-    messageEpoch& operator=(const messageEpoch& obj) {
-        // test for self-assignment
-        if (&obj != this) {
-             minutesSinceEpoch_ = obj.minutesSinceEpoch_;
-        }
-        return *this;
-    }
-    
-    messageEpoch operator-=(long long rhs) {
-        this->minutesSinceEpoch_ -= rhs;
-        return *this;
-    }
-    
-    messageEpoch operator+=(long long rhs) {
-        this->minutesSinceEpoch_ += rhs;
-        return *this;
-    }
-    
-    messageEpoch operator+(const long long& rhs) {
-        messageEpoch temp(*this);
-        temp += rhs;
-        return temp;
-    }
-    
-    messageEpoch operator-(const long long& rhs) {
-        messageEpoch temp(*this);
-        temp -= rhs;
-        return temp;
-    }
-    
-    bool operator>(const messageEpoch& rhs) {
-        return minutesSinceEpoch_ > rhs.minutesSinceEpoch_;
-    }
-    
-    bool operator<(const messageEpoch& rhs) {
-        return minutesSinceEpoch_ < rhs.minutesSinceEpoch_;
-    }
-    
-    friend std::basic_ostream<char>& operator<<(std::basic_ostream<char>& ss, 
-												const messageEpoch& epoch);
-    
-    void update()
-    {
-        time_t t = time(0);   // get time now
-        minutesSinceEpoch_ = floor(t / 60.0);
-    }
-    
-    std::string to_string(bool local_time = false) const;
-     
-private:
-    
-    unsigned long long minutesSinceEpoch_=0; 
-};
 
 unsigned long long timespecDiff(struct timespec& start, struct timespec& stop);
 
@@ -163,8 +92,56 @@ inline bool fExists (const std::string& name) {
 }
 
 std::string dateTimeNow();
-std::string generateMessageId();
 
-#endif /* MESSAGE_EPOCH_H */
+
+//
+// Address Holder & Directory classes etc
+//
+
+typedef unsigned int AddressElement;
+// NB: vector could be inherited privately if we were worried about users of 
+// ActorAddress having access to all of vector's public functions
+class ActorAddress : public std::vector<AddressElement>
+{
+public:
+    // constructors etc
+   
+    // friends
+    friend basic_ostream<char>& operator<<(basic_ostream<char>& os, const ActorAddress& addr);
+
+    bool contains (const ActorAddress& test) {
+        // contains means it starts with test and continues
+        if (test.size() >= size()) {
+            return false;
+        }
+        for (size_type i=0; i<test.size(); i++) {
+            if (at(i) != test.at(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+basic_ostream<char>& operator<<(basic_ostream<char>& os, const ActorAddress& addr);
+
+typedef std::string ActorID;
+typedef std::string TaskID;
+
+class Directory {
+public:
+
+    Directory() = default;
+    ~Directory() = default;
+    void add(const ActorID& name, const ActorAddress& address);
+    ActorAddress& add(const ActorID& name, const ActorAddress& parentAddr, AddressElement uniqueNumeral);
+    ActorAddress  find(const ActorID& name);
+    void remove(const ActorID& name);
+
+private:
+    std::mutex directoryLock_;
+    std::map <ActorID, ActorAddress> directory_;
+};
+
+#endif /* CALF_H */
 
 /* end of file */

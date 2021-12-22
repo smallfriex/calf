@@ -20,6 +20,9 @@ typedef messageLog::LogLevel LogLevel;
 
 void actorJourneyTracker::actionReceiveVectorMessage(void) {
     
+	// get task info
+	latestTask_ = inbuffer_.taskId_;
+
     // get message
     messageVector* vmr = GetMessagePtr<messageVector>(inbuffer_);
 
@@ -49,11 +52,12 @@ void actorJourneyTracker::actionReceiveVectorMessage(void) {
 void actorJourneyTracker::actionFlushJourney(void) {
 	// Send this journey to the log
 	std::stringstream ss;
-	ss << "Journey log: " << journey_;
+	ss << "Journey log of " << latestTask_ << " is\n                      " << journey_;
 	SendLogEntry(LogLevel::LH_INFO, ss.str());
 
 	// Clear journey ready for reuse
 	journey_.clear();
+	latestTask_.clear();
 
 	// tell parent we've flushed, so we can be reused
     // in this case we can bounce the command back
@@ -61,8 +65,8 @@ void actorJourneyTracker::actionFlushJourney(void) {
     // strip ID to get POOL destination
     size_t pos = actorName_.find("-ID-");
     assert (pos != std::string::npos);
-    ID dest = actorName_.substr(0, pos);
-    SetMessageHolder(outbuffer_,dest,inbuffer_.payload_);
+    ActorID dest = actorName_.substr(0, pos);
+    SetMessageHolder(outbuffer_, dest, inbuffer_.payload_);
     sendRequest(outbuffer_);
     // don't wipe, as bouncing
 }
