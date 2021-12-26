@@ -109,6 +109,9 @@ public:
     // friends
     friend basic_ostream<char>& operator<<(basic_ostream<char>& os, const ActorAddress& addr);
 
+    // methods
+    std::string toString();
+    
     bool contains (const ActorAddress& test) {
         // contains means it starts with test and continues
         if (test.size() >= size()) {

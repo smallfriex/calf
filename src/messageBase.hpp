@@ -96,6 +96,10 @@ public:
         return *this;
     }
 
+    ~messageHolder() {
+        // do not kill payload
+    }
+
     void init(const ActorID& destination, const ActorID& from, messageBase* data, const TaskID& task_id) {
         dest_ = destination;
         from_ = from;
@@ -105,8 +109,8 @@ public:
         requeued_ = 0;
     }
 
-    ~messageHolder() {
-        // do not kill payload
+    void setAddress(const ActorAddress& dest_addr) {
+        destAddr_ =  dest_addr;
     }
 
     bool isType(Message_T (*test)(void)) {return payload_->isType(test);}
@@ -124,8 +128,15 @@ public:
 #define SetPoolMessageHolder(a,b,c,d) SetMessageHolder_(a,b,actorName_,c,d) 
 
 template <class payloadT>
-int SetMessageHolder_(messageHolder& mh, const ActorID& dest, const ActorID& from, const payloadT* payload, const TaskID& task = "") {
-    mh.init(dest,from,(messageBase*) payload, task);
+int SetMessageHolder_(messageHolder& mh, const ActorID& destName, const ActorID& fromName, const payloadT* payload, const TaskID& task = "") {
+    mh.init(destName,fromName,(messageBase*) payload, task);
+    return 0;
+}
+
+template <class payloadT>
+int SetMessageHolder_(messageHolder& mh, const ActorAddress& destAddr, const ActorID& fromName, const payloadT* payload) {
+    mh.init("",fromName,(messageBase*) payload, "");
+    mh.setAddress(destAddr);
     return 0;
 }
 
@@ -145,10 +156,10 @@ payloadT* GetMessagePtr(const messageHolder& mh) {
     return retObj;
 }
 
-/* Note: C++ doesn't natively support reflection, so I've used addresses of static pointers
+/* Note: C++ doesn't natively support reflection, so CALF uses addresses of static pointers
    to identifity message types. This is fast, adding little overhead for message construction
-   or distinguishing and you can still print a message type by dereferencing, which is useful
-   in debugging applications.
+   or distinguishing and you can still print a message type by calling the function, which is
+   useful in debugging applications.
 
    The shortfall of this approach is the switch construct can't be supported, which would
    make the actor code that determines what to do with an incoming message a lot cleaner.

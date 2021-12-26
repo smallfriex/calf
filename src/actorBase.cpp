@@ -83,21 +83,25 @@ int actorBase::finish() {
 
 // TODO: could make an xml version
 void actorBase::reportActivity(std::stringstream& output, int level) {
-    for (int t=0; t<level; t++) {output << "\t";}
+    static const char* indent = "  "; 
+    for (int t=0; t<level; t++) {output << indent;}
+    std::string identity = actorName_;
+    while (identity.length() < 6) { identity+=' ';}
+    identity += " | " + actorAddress_.toString();
     std::string messageSummary = std::to_string(input_.size()) + "/" + std::to_string(requeuedCount_) + "/" + std::to_string(processedCount_); 
     double percentage = (0.0001f * (double) tickTimings_.mean()) / WAIT_TIME; 
-    output << actorName_ << " | status: " << status_ << " " << userStatus_
+    output << identity << " | status: " << status_ << " " << userStatus_
            << " | messages: " << std::setw(6) << std::setfill(' ') << messageSummary      
            << " | load: "     << std::setw(7) << std::setfill('0') << std::fixed << std::setprecision(3) << percentage << "%\n";
     for (auto& pool : ourPools_) {
-        for (int t=0; t<level; t++) {output << "\t";}
+        for (int t=0; t<level; t++) {output << indent;}
         output << "- " << pool.first << ":\n";
         for (auto& pool_child : pool.second.childActors_) {
             pool_child.second->reportActivity(output, level + 1);
         }
     }
     if (childActors_.size() > 0) {
-        for (int t=0; t<level; t++) {output << "\t";}
+        for (int t=0; t<level; t++) {output << indent;}
         output << "- CHILDREN: " << "\n";
         for (auto& child : childActors_) {
             child.second->reportActivity(output, level + 1);
