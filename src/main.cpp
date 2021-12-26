@@ -61,8 +61,8 @@ void sigHandler(int s)
         {
             // Application State Report - ripple down through actors
             std::stringstream ss;
-            ss << "ASR | thread-status userstatus | messages queued/requeued/processed | "
-               << "load\n";
+            ss << "ASR | address | thread-status userstatus | messages queued/requeued/processed | load\n"
+               << "------------------------------------------------------------------------------------\n";
             top->reportActivity(ss,0);
             std::cout << "\n" << ss.str() << std::endl;
 			break;

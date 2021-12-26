@@ -10,13 +10,13 @@
  * Changed
  */
 
-#include "calf.hpp"
 #include <iostream>
 #include <stdio.h>
 #include <signal.h>
 #include <execinfo.h>
 #include <unistd.h>
 #include <time.h>
+#include "calf.hpp"
 
 unsigned long long timespecDiff(struct timespec& start, struct timespec& end) {
     long secs = difftime(end.tv_sec, start.tv_sec);
@@ -67,9 +67,21 @@ int runProcess(std::string path, bool wait) {
     return (int) PID;        
 }
 
+std::string ActorAddress::toString() {
+    std::string str{""};
+    for (size_t i=0; i< size();i++) {
+        str += std::to_string(at(i));
+        if (i < size()-1)
+            str += ".";
+    }
+    return str;
+}
+
 basic_ostream<char>& operator<<(basic_ostream<char>& os, const ActorAddress& addr) {
-    for (auto obj : addr) {
-        os << obj << ".";
+    for (size_t i=0; i< addr.size();i++) {
+        os << addr.at(i);
+        if (i < addr.size()-1)
+            os << ".";
     }
     return os;
 }
